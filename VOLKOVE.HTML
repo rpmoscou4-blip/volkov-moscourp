@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chez Volkov – Gestion Restaurant</title>
+    <style>
+        :root { --gold: #d4af37; --red: #8b0000; --dark: #0a0a0a; --grey: #222; }
+        body, html { margin: 0; padding: 0; min-height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--dark); color: white; }
+        .hidden { display: none !important; }
+
+        /* ACCUEIL */
+        #section-home {
+            background: url('image chez volkov.png') no-repeat center center fixed;
+            background-size: cover;
+            height: 100vh; display: flex; align-items: center; justify-content: center;
+            position: fixed; width: 100%; z-index: 2000;
+        }
+        .auth-box { background: rgba(0,0,0,0.95); padding: 35px; border: 2px solid var(--gold); border-radius: 15px; width: 320px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: 1px solid var(--gold); background: #111; color: white; box-sizing: border-box; }
+
+        /* NAVIGATION */
+        nav { background: #000; padding: 15px; display: flex; justify-content: center; gap: 20px; border-bottom: 2px solid var(--gold); position: sticky; top: 0; z-index: 1000; flex-wrap: wrap; }
+        nav span { cursor: pointer; font-weight: bold; color: var(--gold); text-transform: uppercase; font-size: 0.9em; }
+
+        /* CONTENU */
+        .container { padding: 20px; max-width: 1000px; margin: auto; }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 25px; }
+        .card { background: #1a1a1a; padding: 20px; border-radius: 12px; border: 1px solid #333; text-align: center; }
+        .ingredients { color: #aaa; font-style: italic; font-size: 0.85em; margin: 10px 0; }
+        .price { font-size: 1.4em; color: #ff4d4d; font-weight: bold; }
+        
+        .controls { display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 15px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 50px; }
+        .btn-qty { width: 35px; height: 35px; border-radius: 50%; border: none; background: var(--red); color: white; cursor: pointer; font-size: 1.2em; }
+
+        /* TICKETS & STATUTS */
+        .ticket { background: #fff; color: #000; padding: 15px; margin-bottom: 15px; border-radius: 5px; font-family: 'Courier New', monospace; border-left: 8px solid var(--red); position: relative;}
+        .status-label { font-weight: bold; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-top: 5px; text-transform: uppercase; border: 1px solid #000; }
+        
+        /* BOUTONS PDG */
+        .pdg-actions { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 15px; }
+        .btn-statut { padding: 8px; font-size: 0.8em; cursor: pointer; border: none; font-weight: bold; border-radius: 3px; color: white; flex: 1; }
+        .btn-prep { background: #f39c12; }
+        .btn-livr { background: #3498db; }
+        .btn-term { background: #27ae60; }
+        .btn-del { background: #c0392b; width: 30px; }
+
+        /* BARRE TOTAL */
+        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #000; padding: 20px; text-align: center; border-top: 3px solid var(--gold); z-index: 999; }
+        .btn-order { background: var(--gold); color: #000; border: none; padding: 10px 25px; font-weight: bold; cursor: pointer; border-radius: 5px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+<div id="section-home">
+    <div class="auth-box">
+        <h2 style="color:var(--gold)">VOTRE COMPTE</h2>
+        <input id="reg-nom" placeholder="Nom">
+        <input id="reg-prenom" placeholder="Prénom">
+        <input id="reg-tel" placeholder="N° de Téléphone">
+        <button class="btn-order" style="width:100%; margin-top:10px;" onclick="saveAccount()">Entrer</button>
+        <p style="font-size: 0.7em; cursor:pointer; margin-top:20px; color: #444;" onclick="enterPDG()">[ Accès Propriétaire ]</p>
+    </div>
+</div>
+
+<nav id="navbar" class="hidden">
+    <span onclick="showPage('shop')">Commander</span>
+    <span onclick="showPage('history')">Mes Commandes</span>
+    <span onclick="showPage('profile')">Mon Compte</span>
+    <span onclick="location.reload()" style="color:#ff4444">Déconnexion</span>
+</nav>
+
+<div id="main-content" class="container hidden">
+    <div id="page-shop">
+        <h2 style="text-align:center; color:var(--gold)">MENUS & CARTE</h2>
+        <div class="menu-grid" id="grid-items"></div>
+        <div style="height: 120px;"></div>
+    </div>
+
+    <div id="page-profile" class="hidden">
+        <div class="card" style="max-width: 400px; margin: auto;">
+            <h2 style="color:var(--gold)">MES INFOS</h2>
+            <input id="mod-nom" placeholder="Nom">
+            <input id="mod-prenom" placeholder="Prénom">
+            <input id="mod-tel" placeholder="Téléphone">
+            <button class="btn-order" style="width:100%" onclick="updateProfile()">Mettre à jour</button>
+        </div>
+    </div>
+
+    <div id="page-history" class="hidden">
+        <h2 style="color:var(--gold)">HISTORIQUE CLIENT</h2>
+        <div id="history-list"></div>
+    </div>
+
+    <div id="page-pdg" class="hidden">
+        <h2 style="color:var(--gold)">COMMANDES EN COURS (PDG)</h2>
+        <div id="pdg-list"></div>
+    </div>
+</div>
+
+<div id="cart-footer" class="cart-bar hidden">
+    TOTAL : <span id="total-val" style="color:var(--gold)">0</span> €
+    <button class="btn-order" style="margin-left:20px" onclick="validateOrder()">Passer la commande</button>
+</div>
+
+<script>
+    const ITEMS = [
+        {id:'m1', name:'Menu Volkov', price:110, ing:'Pizza, Eau, Soda'},
+        {id:'m2', name:'Menu Classique', price:140, ing:'Burger, Frites, Eau'},
+        {id:'m3', name:'Menu Gourmand', price:130, ing:'Burger, Frites, Soda'},
+        {id:'m4', name:'Menu Duo', price:110, ing:'Pizza, Soda, Eau'},
+        {id:'u1', name:'Pizza', price:60, ing:'Seule'},
+        {id:'u2', name:'Burger', price:80, ing:'Seul'},
+        {id:'u3', name:'Frites', price:30, ing:'Portion'},
+        {id:'u4', name:'Eau', price:30, ing:'50cl'},
+        {id:'u5', name:'Soda', price:20, ing:'33cl'}
+    ];
+
+    let cart = {};
+    let currentUser = null;
+
+    function saveAccount() {
+        currentUser = {
+            nom: document.getElementById('reg-nom').value,
+            prenom: document.getElementById('reg-prenom').value,
+            tel: document.getElementById('reg-tel').value
+        };
+        if(!currentUser.nom || !currentUser.tel) return alert("Infos requises !");
+        
+        document.getElementById('section-home').classList.add('hidden');
+        document.getElementById('navbar').classList.remove('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+        document.getElementById('cart-footer').classList.remove('hidden');
+        
+        document.getElementById('mod-nom').value = currentUser.nom;
+        document.getElementById('mod-prenom').value = currentUser.prenom;
+        document.getElementById('mod-tel').value = currentUser.tel;
+        renderShop();
+    }
+
+    function updateProfile() {
+        currentUser.nom = document.getElementById('mod-nom').value;
+        currentUser.prenom = document.getElementById('mod-prenom').value;
+        currentUser.tel = document.getElementById('mod-tel').value;
+        alert("Profil sauvegardé !");
+        showPage('shop');
+    }
+
+    function renderShop() {
+        let html = '';
+        ITEMS.forEach(p => {
+            html += `<div class="card">
+                <h3>${p.name}</h3>
+                <div class="ingredients">${p.ing}</div>
+                <div class="price">${p.price} €</div>
+                <div class="controls">
+                    <button class="btn-qty" onclick="updateQty('${p.id}', -1)">-</button>
+                    <span id="qty-${p.id}">0</span>
+                    <button class="btn-qty" onclick="updateQty('${p.id}', 1)">+</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('grid-items').innerHTML = html;
+    }
+
+    function updateQty(id, delta) {
+        cart[id] = (cart[id] || 0) + delta;
+        if(cart[id] < 0) cart[id] = 0;
+        document.getElementById('qty-' + id).innerText = cart[id];
+        let total = 0;
+        ITEMS.forEach(p => { if(cart[p.id]) total += cart[p.id] * p.price; });
+        document.getElementById('total-val').innerText = total;
+    }
+
+    function validateOrder() {
+        if(document.getElementById('total-val').innerText === "0") return alert("Panier vide !");
+        let liv = confirm("Voulez-vous être livré ?");
+        let terrain = liv ? prompt("N° de terrain :") : "À emporter";
+
+        let order = {
+            id: "#" + Math.floor(Math.random()*9000 + 1000),
+            client: currentUser.nom + " " + currentUser.prenom,
+            tel: currentUser.tel,
+            lieu: terrain,
+            items: [],
+            total: document.getElementById('total-val').innerText,
+            status: 'En préparation',
+            date: new Date().toLocaleTimeString()
+        };
+
+        ITEMS.forEach(p => { if(cart[p.id] > 0) order.items.push(cart[p.id] + "x " + p.name); });
+
+        let db = JSON.parse(localStorage.getItem('volkov_final') || "[]");
+        db.unshift(order);
+        localStorage.setItem('volkov_final', JSON.stringify(db));
+        
+        alert("Commande validée !");
+        cart = {}; renderShop(); document.getElementById('total-val').innerText = "0";
+        showPage('history');
+    }
+
+    function showPage(id) {
+        ['page-shop', 'page-history', 'page-profile', 'page-pdg'].forEach(p => document.getElementById(p).classList.add('hidden'));
+        document.getElementById('page-' + id).classList.remove('hidden');
+        document.getElementById('cart-footer').classList.toggle('hidden', id !== 'shop');
+        if(id === 'pdg') loadPDG();
+        if(id === 'history') loadHistory();
+    }
+
+    function loadPDG() {
+        let db = JSON.parse(localStorage.getItem('volkov_final') || "[]");
+        let html = '';
+        db.forEach((o, i) => {
+            html += `<div class="ticket">
+                <strong>TICKET ${o.id}</strong> - ${o.date}<br>
+                CLIENT : ${o.client}<br>
+                TEL : ${o.tel}<br>
+                LIVRAISON : ${o.lieu}<br>
+                <hr>${o.items.join('<br>')}<br>
+                <strong>TOTAL : ${o.total} €</strong><br>
+                STATUT : <span class="status-label">${o.status}</span>
+                <div class="pdg-actions">
+                    <button class="btn-statut btn-prep" onclick="changeStatus(${i}, 'En préparation')">PRÉPARATION</button>
+                    <button class="btn-statut btn-livr" onclick="changeStatus(${i}, 'En livraison')">LIVRAISON</button>
+                    <button class="btn-statut btn-term" onclick="changeStatus(${i}, 'Terminé')">TERMINÉ</button>
+                    <button class="btn-statut btn-del" onclick="deleteOrder(${i})">X</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('pdg-list').innerHTML = html || "Aucune commande client.";
+    }
+
+    function changeStatus(index, s) {
+        let db = JSON.parse(localStorage.getItem('volkov_final') || "[]");
+        db[index].status = s;
+        localStorage.setItem('volkov_final', JSON.stringify(db));
+        loadPDG();
+    }
+
+    function deleteOrder(index) {
+        if(confirm("Supprimer la commande ?")) {
+            let db = JSON.parse(localStorage.getItem('volkov_final') || "[]");
+            db.splice(index, 1);
+            localStorage.setItem('volkov_final', JSON.stringify(db));
+            loadPDG();
+        }
+    }
+
+    function loadHistory() {
+        let db = JSON.parse(localStorage.getItem('volkov_final') || "[]");
+        let myOrders = db.filter(o => o.tel === currentUser.tel);
+        let html = '';
+        myOrders.forEach(o => {
+            html += `<div class="ticket" style="border-left-color:var(--gold)">
+                <strong>Commande ${o.id}</strong> - ${o.total} €<br>
+                Statut : <b style="color:var(--red)">${o.status}</b><br>
+                <small>Lieu : ${o.lieu}</small>
+            </div>`;
+        });
+        document.getElementById('history-list').innerHTML = html || "Pas de commandes.";
+    }
+
+    function enterPDG() {
+        if(prompt("Code Propriétaire :") === "MADI") {
+            document.getElementById('section-home').classList.add('hidden');
+            document.getElementById('navbar').classList.remove('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+            showPage('pdg');
+        }
+    }
+</script>
+</body>
+</html>
